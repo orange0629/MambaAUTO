@@ -14,10 +14,11 @@ warnings.filterwarnings('ignore')
 
 class Dataset_ETT_hour(Dataset):
     '''
-    This dataloader can provide train, validation and test data in Tensor form.
+    This dataloader can provide train, validation and test data in Tensor form of ETTh dataset.
     You can treat it as a combination of train_dataloader, validation_dataloader, and test_dataloader.
     '''
-    def __init__(self, root_path, flag:str = 'train', size:list = None, data_path:str ='ETTh1.csv',
+
+    def __init__(self, root_path:str, flag:str = 'train', size:list = None, data_path:str ='ETTh1.csv',
                  scale:bool = True, seasonal_patterns = None, drop_short = False):
         '''
         Constructor function. Inherit from Informer (Zhou, 2020). Some parameters are not used in this model.
@@ -29,6 +30,7 @@ class Dataset_ETT_hour(Dataset):
         seasonal_patterns: Not used in this model.
         drop_short: Not used in this model.
         '''
+
         self.seq_len = size[0] # seq_len is the length of the context window, default set to 672
         self.label_len = size[1]
         self.pred_len = size[2] # pred_len is the length of the prediction window length, default set to 92.
@@ -58,6 +60,7 @@ class Dataset_ETT_hour(Dataset):
         ---
         Return nothing. This function is inplace.
         '''
+
         self.scaler = StandardScaler()
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path)) # df_raw in shape [overall_len x (1 + feat_num)], 1 for timestamp
@@ -70,7 +73,7 @@ class Dataset_ETT_hour(Dataset):
 
         # remove the first column which is the textual timestamp
         cols_data = df_raw.columns[1:]
-        df_data = df_raw[cols_data] # df_data in [shape overall_len x feat_num]
+        df_data = df_raw[cols_data] # df_data in shape [overall_len x feat_num]
 
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
@@ -87,14 +90,14 @@ class Dataset_ETT_hour(Dataset):
 
     def __getitem__(self, index):
         '''
-        Get the item, i.e. x,y pair with located at index.
-        Note that we treat the input in a channel-independent manner, equivalent to concate dimensions after the former one.
+        Get the item, i.e. x,y pair with located at index of the whole dataloader.
+        Note that we treat the input in a channel-independent manner, equivalent to concate dimensions one after another.
         '''
         feat_id = index // self.tot_len
         s_begin = index % self.tot_len
         
         s_end = s_begin + self.seq_len
-        r_begin = s_end - self.label_len
+        r_begin = s_end - self.label_len # label len is useless in this model
         r_end = r_begin + self.label_len + self.pred_len 
         # this means y will be x shift right by a token length, because pred_len = token_len
         seq_x = self.data_x[s_begin: s_end, feat_id: feat_id + 1]
@@ -111,13 +114,29 @@ class Dataset_ETT_hour(Dataset):
         return self.scaler.inverse_transform(data)
 
 class Dataset_Custom(Dataset):
-    def __init__(self, root_path, flag='train', size=None, data_path='ETTh1.csv',
-                 scale=True, seasonal_patterns=None, drop_short=False):
-        self.seq_len = size[0]
+    '''
+    This dataloader can provide train, validation and test data in Tensor form of any customized dataset.
+    You can treat it as a combination of train_dataloader, validation_dataloader, and test_dataloader.
+    '''
+
+    def __init__(self, root_path:str, flag:str = 'train', size:list = None, data_path:str = 'ETTh1.csv',
+                 scale:bool = True, seasonal_patterns = None, drop_short = False):
+        '''
+        Constructor function. Inherit from Informer (Zhou, 2020). Some parameters are not used in this model.
+        root_path: the root directory of the data
+        flag: Either train, val, or test. Indicating the data type. Default set to train.
+        size: A list contains three int. (seq_len, label_len, pred_len). Consider seq_len and pred_len for this model. Set label_len < seq_len.
+        data_path: the location of the data under the root directory. Default set to 'ETTh1.csv'.
+        scale: A bool variable. Indicate whether the input data will pass a standard scaler. Default set to True. Note that this is not an Instance Norm.
+        seasonal_patterns: Not used in this model.
+        drop_short: Not used in this model.                
+        '''
+
+        self.seq_len = size[0] # seq_len is the length of the context window, default set to 672
         self.label_len = size[1]
-        self.pred_len = size[2]
-        self.token_len = self.seq_len - self.label_len
-        self.token_num = self.seq_len // self.token_len
+        self.pred_len = size[2] # pred_len is the length of the prediction window length, default set to 92.
+        self.token_len = self.seq_len - self.label_len # understand the formula as defining the token_len first
+        self.token_num = self.seq_len // self.token_len 
         self.flag = flag
         # init
         assert flag in ['train', 'test', 'val']
@@ -129,14 +148,14 @@ class Dataset_Custom(Dataset):
         self.root_path = root_path
         self.data_path = data_path
         self.__read_data__()
-        self.enc_in = self.data_x.shape[-1]
-        self.tot_len = len(self.data_x) - self.seq_len - self.pred_len + 1
+        self.enc_in = self.data_x.shape[-1] # feat_num
+        self.tot_len = len(self.data_x) - self.seq_len - self.pred_len + 1 # maximum steps that the sliding window can sample with stride = 1. Equal to number of x,y pairs.
 
     def __read_data__(self):
         self.scaler = StandardScaler()
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
-        num_train = int(len(df_raw) * 0.7)
+        num_train = int(len(df_raw) * 0.7) # 7:2:1
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
@@ -144,9 +163,9 @@ class Dataset_Custom(Dataset):
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
             
-
+        # remove the first column which is the textual timestamp, subject to change for different datasets
         cols_data = df_raw.columns[1:]
-        df_data = df_raw[cols_data]
+        df_data = df_raw[cols_data] # df_data in shape [overall_len x feat_num]
 
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
@@ -158,7 +177,7 @@ class Dataset_Custom(Dataset):
         self.data_stamp = torch.load(os.path.join(self.root_path, f'{data_name}.pt'))
         self.data_stamp = self.data_stamp[border1:border2]
         self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
+        self.data_y = data[border1:border2] # x, y in shape [train/val/test_len x feat_num]
         
 
     def __getitem__(self, index):
@@ -168,10 +187,11 @@ class Dataset_Custom(Dataset):
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
-        seq_x = self.data_x[s_begin:s_end, feat_id:feat_id+1]
-        seq_y = self.data_y[r_begin:r_end, feat_id:feat_id+1]
-        seq_x_mark = self.data_stamp[s_begin:s_end:self.token_len]
-        seq_y_mark = self.data_stamp[s_end:r_end:self.token_len]
+        # this means y will be x shift right by a token length, because pred_len = token_len
+        seq_x = self.data_x[s_begin: s_end, feat_id: feat_id + 1]
+        seq_y = self.data_y[r_begin: r_end, feat_id: feat_id + 1]
+        seq_x_mark = self.data_stamp[s_begin: s_end: self.token_len]
+        seq_y_mark = self.data_stamp[s_end: r_end: self.token_len]
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
@@ -182,15 +202,30 @@ class Dataset_Custom(Dataset):
 
 
 class Dataset_Solar(Dataset):
-    def __init__(self, root_path, flag='train', size=None, data_path='ETTh1.csv',
-                 seasonal_patterns=None, scale=True, drop_short=False):
+    '''
+    This dataloader can provide train, validation and test data in Tensor form of the solar dataset.
+    You can treat it as a combination of train_dataloader, validation_dataloader, and test_dataloader.
+    '''
+
+    def __init__(self, root_path:str, flag:str = 'train', size:list = None, data_path:str = 'ETTh1.csv',
+                 seasonal_patterns = None, scale:bool = True, drop_short = False):
+        '''
+        Constructor function. Inherit from Informer (Zhou, 2020). Some parameters are not used in this model.
+        root_path: the root directory of the data
+        flag: Either train, val, or test. Indicating the data type. Default set to train.
+        size: A list contains three int. (seq_len, label_len, pred_len). Consider seq_len and pred_len for this model. Set label_len < seq_len.
+        data_path: the location of the data under the root directory. Default set to 'ETTh1.csv'.
+        scale: A bool variable. Indicate whether the input data will pass a standard scaler. Default set to True. Note that this is not an Instance Norm.
+        seasonal_patterns: Not used in this model.
+        drop_short: Not used in this model.                
+        '''
         # size [seq_len, label_len, pred_len]
         # info
-        self.seq_len = size[0]
+        self.seq_len = size[0] # seq_len is the length of the context window, default set to 672
         self.label_len = size[1]
-        self.pred_len = size[2]
+        self.pred_len = size[2] # pred_len is the length of the prediction window length, default set to 92.
         
-        self.token_len = self.seq_len - self.label_len
+        self.token_len = self.seq_len - self.label_len # understand the formula as defining the token_len first
         self.token_num = self.seq_len // self.token_len
         self.flag = flag
         # init
@@ -203,8 +238,8 @@ class Dataset_Solar(Dataset):
         self.root_path = root_path
         self.data_path = data_path
         self.__read_data__()
-        self.enc_in = self.data_x.shape[-1]
-        self.tot_len = len(self.data_x) - self.seq_len - self.pred_len + 1
+        self.enc_in = self.data_x.shape[-1] # feat_num
+        self.tot_len = len(self.data_x) - self.seq_len - self.pred_len + 1 # maximum steps that the sliding window can sample with stride = 1. Equal to number of x,y pairs.
 
     def __read_data__(self):
         self.scaler = StandardScaler()
@@ -217,7 +252,7 @@ class Dataset_Solar(Dataset):
         df_raw = np.stack(df_raw, 0)
         df_raw = pd.DataFrame(df_raw)
 
-        num_train = int(len(df_raw) * 0.7)
+        num_train = int(len(df_raw) * 0.7) # 7:2:1
         num_test = int(len(df_raw) * 0.2)
         num_valid = int(len(df_raw) * 0.1)
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
@@ -244,10 +279,11 @@ class Dataset_Solar(Dataset):
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
-        seq_x = self.data_x[s_begin:s_end, feat_id:feat_id+1]
-        seq_y = self.data_y[r_begin:r_end, feat_id:feat_id+1]
+        # this means y will be x shift right by a token length, because pred_len = token_len
+        seq_x = self.data_x[s_begin: s_end, feat_id: feat_id + 1]
+        seq_y = self.data_y[r_begin: r_end, feat_id: feat_id + 1]
         seq_x_mark = torch.zeros((seq_x.shape[0], 1))
-        seq_y_mark = torch.zeros((seq_x.shape[0], 1))
+        seq_y_mark = torch.zeros((seq_x.shape[0], 1)) # position holder
 
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
