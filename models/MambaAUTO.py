@@ -6,7 +6,7 @@ from transformers import MambaForCausalLM, MambaConfig
 class crossMultiheadAttention(nn.Module):
     '''
     The cross attention block between modalities in the MambaAUTO model. Align the time series modality with the causal LLM modality.
-    Note that the vocab embed size is not necessarily to be the same as the llm size.
+    Note that the vocab embed size is not necessarily to be the same as the llm size. This is a flexible design.
     Inputs:
     patch_embed: the time series modality. [batch_size x n_patch x patch_embed_size]
     vocab_embed: the causal LLM modality. [batch_size x n_vocab x vocab_embed_size]
@@ -55,7 +55,7 @@ class MambaAUTO(nn.Module):
     def __init__(self, configs) -> None:
         super(MambaAUTO, self).__init__()
 
-        # general config
+        # ---general config---
         if torch.cuda.is_available():            
             if configs.use_multi_gpu:
                 self.device = f"cuda:{configs.local_rank}"
@@ -66,25 +66,107 @@ class MambaAUTO(nn.Module):
 
         print(self.device)
 
-        # params
+        # ---params---
         self.token_len = configs.token_len # define the token length. How much timestamps in a token.
+        self.patch_embed_size = configs.patch_embed_size # the size of the patch embedding. How many dimensions in a token after passing patch embedder.
+
         self.vocab_embedding = self.mamba.get_input_embeddings().weight # get the pre-trained vocab embedding
+        self.vocab_embedding.requires_grad = False # freeze the vocab embedding
+        self.vocab_size = self.vocab_embedding.size(0) # get the vocab size
+        self.vocab_embed_size = self.vocab_embedding.size(1) # get the vocab embedding size
+
+        self.probing_size = configs.probing_size # the size of the vocabs after probing. probing_size = n_vocab in the cross attention block.
+
         self.instanceNorm = nn.InstanceNorm1d(num_features = self.token_len) # instance normalization the input time series
-        self.llm_size = configs.llm_size # the size of the causal LLM
+        self.llm_size = configs.llm_size # the size of the causal LLM, Mamba used here, e.g. 4096
 
-        # blocks
+        # ---blocks---
+        # Get the pre-trained model 
         self.mamba = MambaForCausalLM.from_pretrained(
-
+            "state-spaces/mamba-2.8b-hf",
+            device_map = self.device
         )
 
+        # freeze the model
+        for name, param in self.mamba.named_parameters():
+            param.requires_grad = False
+
+        # cross multihead attention block
         self.crossMultiheadAttention = crossMultiheadAttention(
             d_k = 64, # ? maybe 128? 256?
             nhead = 8,
             patch_embed_size = 64,
-            vocab_embed_size = 4096,
-            llm_size = 4096
+            vocab_embed_size = self.vocab_embed_size,
+            llm_size = self.llm_size
         )
 
-        self.outputLinear = nn.Linear(self.llm_size, self.token_len)
+        # patch embedder
+        self.patchEmbedder = nn.Linear(self.token_len, self.patch_embed_size) # project [batch_size x n_patch x token_len] to [batch_size x n_patch x patch_embed_size]
 
+        # linears
+        self.linearProbe = nn.Linear(self.vocab_size, self.probing_size) # project [vocab_size x vocab_embed_size] to [probing_size x vocab_embed_size], need T twice
+        self.outputLinear = nn.Linear(self.llm_size, self.token_len) # project [batch_size x n_patch x llm_size] to [batch_size x n_patch x token_len]
+
+    def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+        '''
+        x_enc: [batch_size x seq_len x nvar]
+        x_mark_enc: [batch_size x seq_len x nvar]
+        '''
+        # ---preprocess---
+        # instance norm
+        means = torch.mean(x_enc, dim = 1, keepdim = True).detach() # keepdim so that we can broadcast, mean in shape [batch_size x 1 x nvar]
+        x_enc = x_enc - means
+
+        stdev = torch.sqrt(
+            torch.var(x_enc, dim = 1, unbiased = False, keepdim = True) + 1e-5
+        ) # stdev in shape [batch_size x 1 x nvar]
+
+        x_enc /= stdev
+
+        bs, seq_len, n_vars = x_enc.shape
+
+        x_enc = x_enc.permute(0, 2, 1)
+
+        # --channel independence--
+        # equivalent to concate features one after another
+        x_enc = x_enc.reshape(bs * n_vars, -1) # [batch_size * nvar x seq_len]
+
+        # --patching--
+        fold_out = x_enc.unfold(dimension = -1, size = self.token_len, step = self.token_len) # [batch_size * nvar x n_patch x token_len]
+        n_patch = fold_out.size(1)
+
+        # --patch embedding--
+        patch_embed = self.patchEmbedder(fold_out) # [batch_size * nvar x n_patch x patch_embed_size]
+
+        # --cross attention--
+        vocab_embed = self.linearProbe(self.vocab_embedding) # [probing_size x vocab_embed_size]
+        vocab_embed = vocab_embed.unsqueeze(0).expand(bs * n_vars, -1, -1) # [batch_size * nvar x probing_size x vocab_embed_size]
+        patch_embed = self.crossMultiheadAttention(patch_embed, vocab_embed) # [batch_size * nvar x n_patch x llm_size]
+
+        # --send to LLM--
+        outputs = self.mamba(
+            inputs_embeds = patch_embed,
+        )[1] # mamba returns (loss, logits, cache_params, hidden_states), logits in shape [batch_size * nvar x n_patch x llm_size]
+
+        # --output linear--
+        dec_out = self.outputLinear(outputs) # [batch_size * nvar x n_patch x token_len]
+
+        # concat and reshape
+        dec_out = dec_out.reshape(bs, n_vars, -1) # [batch_size x nvar x n_patch * token_len]
+
+        dec_out = dec_out.permute(0, 2, 1) # [batch_size x n_patch * token_len x nvar]
+
+        # --denormalize--
+        dec_out = dec_out * stdev[:, 0, :].unsqueeze(1).repeat(1, n_patch * self.token_len, 1)
+        dec_out = dec_out + means[:, 0, :].unsqueeze(1).repeat(1, n_patch * self.token_len, 1)
+
+        return dec_out
+    
+    def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+        return self.forecast(x_enc, x_mark_enc, x_dec, x_mark_dec)
+
+
+
+
+            
         
