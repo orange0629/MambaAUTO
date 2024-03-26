@@ -1,5 +1,9 @@
 import os
 import datetime
+import sys
+
+sys.path.insert(0, "../data_provider/")
+
 import numpy as np
 import pandas as pd
 import torch
@@ -10,7 +14,6 @@ from utils.tools import convert_tsf_to_dataframe
 import warnings
 
 warnings.filterwarnings('ignore')
-
 
 class Dataset_ETT_hour(Dataset):
     '''
@@ -24,7 +27,7 @@ class Dataset_ETT_hour(Dataset):
         Constructor function. Inherit from Informer (Zhou, 2020). Some parameters are not used in this model.
         root_path: the root directory of the data
         flag: Either train, val, or test. Indicating the data type. Default set to train.
-        size: A list contains three int. (seq_len, label_len, pred_len). Consider seq_len and pred_len for this model. Set label_len < seq_len.
+        size: A list contains three int. (seq_len, label_len = seq_len - token_len, pred_len). Consider seq_len and pred_len for this model. Set label_len < seq_len.
         data_path: the location of the data under the root directory. Default set to 'ETTh1.csv'.
         scale: A bool variable. Indicate whether the input data will pass a standard scaler. Default set to True. Note that this is not an Instance Norm.
         seasonal_patterns: Not used in this model.
