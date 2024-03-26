@@ -1,9 +1,6 @@
 import os
 import datetime
 import sys
-
-sys.path.insert(0, "../data_provider/")
-
 import numpy as np
 import pandas as pd
 import torch
