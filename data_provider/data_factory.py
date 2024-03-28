@@ -37,8 +37,12 @@ data_dict = {
 
 
 def data_provider(args, flag):
+    '''
+    Given dataset name and type flag (train, val, test), return the corresponding dataset and dataloader.
+    '''
     Data = data_dict[args.data]
 
+    # define parameters
     if flag == 'test':
         shuffle_flag = False
         drop_last = False
@@ -52,41 +56,47 @@ def data_provider(args, flag):
         drop_last = args.drop_last
         batch_size = args.batch_size
 
+    # create dataset
     if flag in ['train', 'val']:
         data_set = Data(
-            root_path=args.root_path,
-            data_path=args.data_path,
-            flag=flag,
-            size=[args.seq_len, args.label_len, args.token_len],
-            seasonal_patterns=args.seasonal_patterns,
-            drop_short=args.drop_short,
+            root_path = args.root_path,
+            data_path = args.data_path,
+            flag = flag,
+            size = [args.seq_len, args.label_len, args.token_len],
+            seasonal_patterns = args.seasonal_patterns,
+            drop_short = args.drop_short,
         )
     else:
         data_set = Data(
-            root_path=args.root_path,
-            data_path=args.data_path,
-            flag=flag,
-            size=[args.test_seq_len, args.test_label_len, args.test_pred_len],
-            seasonal_patterns=args.seasonal_patterns,
-            drop_short=args.drop_short,
+            root_path = args.root_path,
+            data_path = args.data_path,
+            flag = flag,
+            size = [args.test_seq_len, args.test_label_len, args.test_pred_len],
+            seasonal_patterns = args.seasonal_patterns,
+            drop_short = args.drop_short,
         )
+
+    # check dataset shape
     if (args.use_multi_gpu and args.local_rank == 0) or not args.use_multi_gpu:
         print(flag, len(data_set))
+
+    # create dataloader
     if args.use_multi_gpu:
-        train_datasampler = DistributedSampler(data_set, shuffle=shuffle_flag)
-        data_loader = DataLoader(data_set, 
-            batch_size=batch_size,
-            sampler=train_datasampler,
-            num_workers=args.num_workers,
-            persistent_workers=True,
-            pin_memory=True,
-            drop_last=drop_last,
+        train_datasampler = DistributedSampler(data_set, shuffle = shuffle_flag)
+        data_loader = DataLoader(
+            data_set, 
+            batch_size = batch_size,
+            sampler = train_datasampler,
+            num_workers = args.num_workers,
+            persistent_workers = True,
+            pin_memory = True,
+            drop_last = drop_last,
             )
     else:
         data_loader = DataLoader(
             data_set,
-            batch_size=batch_size,
-            shuffle=shuffle_flag,
-            num_workers=args.num_workers,
-            drop_last=drop_last)
+            batch_size = batch_size,
+            shuffle = shuffle_flag,
+            num_workers = args.num_workers,
+            drop_last = drop_last)
     return data_set, data_loader
