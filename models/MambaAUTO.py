@@ -66,27 +66,46 @@ class MambaAUTO(nn.Module):
 
         print(self.device)
 
+        # ---load the pre-trained model---
+
+        self.model_name = configs.model
+
+        model_name_lookup = {
+            "Mamba-130m": "state-spaces/mamba-130m-hf",
+            "Mamba-370m": "state-spaces/mamba-370m-hf",
+            "Mamba-790m": "state-spaces/mamba-790m-hf",
+            "Mamba-1.4b": "state-spaces/mamba-1.4b-hf",
+            "Mamba-2.8b": "state-spaces/mamba-2.8b-hf"
+            }
+
+
+        self.mamba = MambaForCausalLM.from_pretrained(
+            model_name_lookup[self.model_name],
+            device_map = self.device,
+            output_hidden_states = True
+        )
+
         # ---params---
         self.token_len = configs.token_len # define the token length. How much timestamps in a token.
         self.patch_embed_size = configs.patch_embed_size # the size of the patch embedding. How many dimensions in a token after passing patch embedder.
 
-        self.vocab_embedding = self.mamba.get_input_embeddings().weight # get the pre-trained vocab embedding
+        self.vocab_embedding = self.mamba.get_input_embeddings().weight # get the pre-trained vocab embedding, in shape [vocab_size x vocab_embed_size]
         self.vocab_embedding.requires_grad = False # freeze the vocab embedding
         self.vocab_size = self.vocab_embedding.size(0) # get the vocab size
         self.vocab_embed_size = self.vocab_embedding.size(1) # get the vocab embedding size
 
-        self.probing_size = configs.probing_size # the size of the vocabs after probing. probing_size = n_vocab in the cross attention block.
+        # just for test
+        self.patch_embed_size = self.vocab_embed_size
+
+        self.probing_size = configs.probing_size # the size of the vocabs after probing. probing_size = n_vocab in the cross attention block. Like 1000, since mamba have ~50000 tokens by default.
 
         self.instanceNorm = nn.InstanceNorm1d(num_features = self.token_len) # instance normalization the input time series
         self.llm_size = configs.llm_size # the size of the causal LLM, Mamba used here, e.g. 4096
 
-        # ---blocks---
-        # Get the pre-trained model 
-        self.mamba = MambaForCausalLM.from_pretrained(
-            "state-spaces/mamba-2.8b-hf",
-            device_map = self.device
-        )
+        # just for test
+        self.llm_size = self.vocab_embed_size
 
+        # ---blocks---
         # freeze the model
         for name, param in self.mamba.named_parameters():
             param.requires_grad = False
@@ -95,7 +114,7 @@ class MambaAUTO(nn.Module):
         self.crossMultiheadAttention = crossMultiheadAttention(
             d_k = 64, # ? maybe 128? 256?
             nhead = 8,
-            patch_embed_size = 64,
+            patch_embed_size = self.patch_embed_size,
             vocab_embed_size = self.vocab_embed_size,
             llm_size = self.llm_size
         )
@@ -136,17 +155,18 @@ class MambaAUTO(nn.Module):
         n_patch = fold_out.size(1)
 
         # --patch embedding--
+        print(fold_out.device)
         patch_embed = self.patchEmbedder(fold_out) # [batch_size * nvar x n_patch x patch_embed_size]
 
         # --cross attention--
-        vocab_embed = self.linearProbe(self.vocab_embedding) # [probing_size x vocab_embed_size]
+        vocab_embed = self.linearProbe(self.vocab_embedding.T).T # [probing_size x vocab_embed_size]
         vocab_embed = vocab_embed.unsqueeze(0).expand(bs * n_vars, -1, -1) # [batch_size * nvar x probing_size x vocab_embed_size]
         patch_embed = self.crossMultiheadAttention(patch_embed, vocab_embed) # [batch_size * nvar x n_patch x llm_size]
 
         # --send to LLM--
         outputs = self.mamba(
             inputs_embeds = patch_embed,
-        )[1] # mamba returns (loss, logits, cache_params, hidden_states), logits in shape [batch_size * nvar x n_patch x llm_size]
+        ).hidden_states[-1] # mamba returns (loss, logits, cache_params, hidden_states), hidden_states in shape [batch_size * nvar x n_patch x llm_size]
 
         # --output linear--
         dec_out = self.outputLinear(outputs) # [batch_size * nvar x n_patch x token_len]
