@@ -166,7 +166,7 @@ class MambaAUTO(nn.Module):
         # --send to LLM--
         outputs = self.mamba(
             inputs_embeds = patch_embed,
-        ).hidden_states[-1] # mamba returns (loss, logits, cache_params, hidden_states), hidden_states in shape [batch_size * nvar x n_patch x llm_size]
+        ).hidden_states[-1] # mamba returns (loss, logits, cache_params, hidden_states), the last hidden_state in shape [batch_size * nvar x n_patch x llm_size]
 
         # --output linear--
         dec_out = self.outputLinear(outputs) # [batch_size * nvar x n_patch x token_len]
