@@ -112,8 +112,8 @@ class MambaAUTO(nn.Module):
 
         # cross multihead attention block
         self.crossMultiheadAttention = crossMultiheadAttention(
-            d_k = 64, # ? maybe 128? 256?
-            nhead = 8,
+            d_k = configs.d_k, # ? maybe 128? 256?
+            nhead = configs.nhead,
             patch_embed_size = self.patch_embed_size,
             vocab_embed_size = self.vocab_embed_size,
             llm_size = self.llm_size
@@ -126,11 +126,22 @@ class MambaAUTO(nn.Module):
         self.linearProbe = nn.Linear(self.vocab_size, self.probing_size) # project [vocab_size x vocab_embed_size] to [probing_size x vocab_embed_size], need T twice
         self.outputLinear = nn.Linear(self.llm_size, self.token_len) # project [batch_size x n_patch x llm_size] to [batch_size x n_patch x token_len]
 
-    def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+    def forecast(self, x_enc, x_mark_enc = None, x_dec = None, x_mark_dec = None):
         '''
         x_enc: [batch_size x seq_len x nvar]
         x_mark_enc: [batch_size x seq_len x nvar]
         '''
+
+        # position holder
+        if not x_mark_enc:
+            x_mark_enc = torch.zeros_like(x_enc)
+
+        if not x_dec:
+            x_dec = torch.zeros_like(x_enc)
+
+        if not x_mark_dec:
+            x_mark_dec = torch.zeros_like(x_enc)
+
         # ---preprocess---
         # instance norm
         means = torch.mean(x_enc, dim = 1, keepdim = True).detach() # keepdim so that we can broadcast, mean in shape [batch_size x 1 x nvar]
