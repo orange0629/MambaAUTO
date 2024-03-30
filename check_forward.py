@@ -27,19 +27,21 @@ parser.add_argument('--token_len', type = int, default = 96, help = 'token lengt
 # parser.add_argument('pred_len', type = int, default = 96, help = 'prediction window length')
 
 parser.add_argument('--test_seq_len', type = int, default = 672, help = 'test context windwo length')
-parser.add_argument('--test_label_len', type = int, default = 672 - 96, help = 'test context windwo length - token length')
+parser.add_argument('--test_label_len', type = int, default = 672 - 96, help = 'test context window length - token length')
 parser.add_argument('--test_token_len', type = int, default = 96, help = 'test token length')
 parser.add_argument('--test_pred_len', type = int, default = 96, help = 'test prediction window length')
 
 parser.add_argument('--seasonal_patterns', type = str, default = 'Monthly', help = "define subsets for M4 dataset")
 
 # model
-parser.add_argument('--model', type = str, default = 'Mamba-2.8b', help = 'Model Name',
+parser.add_argument('--model', type = str, default = 'Mamba-2.8b', help = 'Mamba Model Used',
                     choices = ['Mamba-130m', 'Mamba-370m', 'Mamba-790m', 'Mamba-1.4b', 'Mamba-2.8b'])
 parser.add_argument('--dropout', type = float, default = 0.1, help = 'dropout')
 parser.add_argument('--patch_embed_size', type = int, default = 2560, help = 'dimension of a patch after embedder')
 parser.add_argument('--probing_size', type = int, default = 1000, help = 'how many prototypes remain after probing')
 parser.add_argument('--llm_size', type = int, default = 2560, help = 'embedding dimension of the llm')
+parser.add_argument('--d_k', type = int, default = 64, help = 'dimension of each cross attention head')
+parser.add_argument('--nhead', type = int, default = 8, help = 'number of heads in cross attention')
 
 # GPU
 parser.add_argument('--gpu', type = int, default = 0, help='gpu')
