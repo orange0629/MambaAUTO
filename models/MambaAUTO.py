@@ -133,13 +133,13 @@ class MambaAUTO(nn.Module):
         '''
 
         # position holder
-        if not x_mark_enc:
+        if x_mark_enc is None:
             x_mark_enc = torch.zeros_like(x_enc)
 
-        if not x_dec:
+        if x_dec is None:
             x_dec = torch.zeros_like(x_enc)
 
-        if not x_mark_dec:
+        if x_mark_dec is None:
             x_mark_dec = torch.zeros_like(x_enc)
 
         # ---preprocess---
