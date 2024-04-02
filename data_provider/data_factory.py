@@ -53,7 +53,7 @@ def data_provider(args, flag):
         batch_size = args.batch_size 
     else:
         shuffle_flag = True
-        drop_last = args.drop_last
+        drop_last = False if args.drop_last == 'False' else True 
         batch_size = args.batch_size
 
     # create dataset

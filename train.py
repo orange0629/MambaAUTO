@@ -11,9 +11,9 @@ import argparse
 parser = argparse.ArgumentParser(description = 'MambaAUTO')
 
 # basic configs
-parser.add_argument('--task_name', type=str, required=True, default='long_term_forecast',
+parser.add_argument('--task_name', type=str, default='long_term_forecast',
                         help='task name, options:[long_term_forecast, short_term_forecast]')
-parser.add_argument('--is_training', type=int, required=True, default=1, help='status')
+parser.add_argument('--is_training', type=int, default=1, help='status')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
 # data loader
@@ -50,11 +50,11 @@ parser.add_argument('--d_k', type = int, default = 64, help = 'dimension of each
 parser.add_argument('--nhead', type = int, default = 8, help = 'number of heads in cross attention')
 
 # optimization
-#parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
+parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
 parser.add_argument('--itr', type=int, default=1, help='experiments times')
 parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
-#parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
+parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--des', type=str, default='test', help='exp description')
 #parser.add_argument('--loss', type=str, default='MSE', help='loss function')
@@ -72,9 +72,9 @@ parser.add_argument('--gpu', type = int, default = 0, help='gpu')
 parser.add_argument('--use_multi_gpu', action = 'store_true', help = 'use multiple gpus', default = False)
 parser.add_argument('--visualize', action = 'store_true', help = 'visualize', default = False)
 
-args = parser.parse_args('')
+args = parser.parse_args()
 
-print(args.data)
+print(args.model)
 
 model = MambaAUTO(args).to('cuda:0')
 
