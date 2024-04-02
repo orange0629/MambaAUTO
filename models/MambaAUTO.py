@@ -166,7 +166,7 @@ class MambaAUTO(nn.Module):
         n_patch = fold_out.size(1)
 
         # --patch embedding--
-        print(fold_out.device)
+        # print(fold_out.device)
         patch_embed = self.patchEmbedder(fold_out) # [batch_size * nvar x n_patch x patch_embed_size]
 
         # --cross attention--

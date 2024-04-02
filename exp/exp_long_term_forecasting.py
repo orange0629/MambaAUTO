@@ -93,7 +93,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         iter_count = 0
         self.model.eval()
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(tqdm(vali_loader), desc = 'Validation'):
+            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(tqdm(vali_loader, desc = 'Validation')):
                 iter_count += 1
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float()
@@ -135,8 +135,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         else:
             total_loss = np.average(total_loss, weights=total_count)
         self.model.train()
-        print("Validation Loss: {:.7f}".format(total_loss))
-        writer.add_scalar('Validation Loss', total_loss)
+        if is_test:
+            print("Test Loss: {:.7f}".format(total_loss))
+        else:
+            print("Validation Loss: {:.7f}".format(total_loss))
         return total_loss
 
     def train(self, setting):
@@ -217,7 +219,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             train_loss = loss_val.item() / count.item()
 
             vali_loss = self.vali(vali_data, vali_loader, criterion)
+            writer.add_scalar('Validation Loss', vali_loss, epoch)
             test_loss = self.vali(test_data, test_loader, criterion, is_test=True)
+            writer.add_scalar('Test Loss', test_loss, epoch)
 
             # report losses each epoch
             if (self.args.use_multi_gpu and self.args.local_rank == 0) or not self.args.use_multi_gpu:
