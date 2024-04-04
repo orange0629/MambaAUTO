@@ -48,6 +48,8 @@ parser.add_argument('--probing_size', type = int, default = 1000, help = 'how ma
 parser.add_argument('--llm_size', type = int, default = 2560, help = 'embedding dimension of the llm')
 parser.add_argument('--d_k', type = int, default = 64, help = 'dimension of each cross attention head')
 parser.add_argument('--nhead', type = int, default = 8, help = 'number of heads in cross attention')
+parser.add_argument('--use_mlp', action = 'store_true', help = 'use mlp in the model', default = False)
+parser.add_argument('--mlp_hidden_dim', type = int, default = 512, help = 'hidden dimension of mlp')
 
 # optimization
 parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
