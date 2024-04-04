@@ -121,12 +121,12 @@ class MambaAUTO(nn.Module):
         )
 
         # patch embedder
-        self.use_mlp = configs.use_mlp
+        self.use_mlp = True if configs.use_mlp == "True" else False
         self.mlp_hidden_dim = configs.mlp_hidden_dim
         if self.use_mlp:
             self.patchEmbedder = mlp.MLP(
                 input_dim = self.token_len,
-                hidden_dims = self.mlp_hidden_dim,
+                hidden_dim = self.mlp_hidden_dim,
                 output_dim = self.patch_embed_size
             )
         else:
