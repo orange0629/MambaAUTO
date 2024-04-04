@@ -1,11 +1,11 @@
-long_term_forecast_Mamba-130m_ETTh1_sl672_ll576_tl96_lr0.0001_bt32_wd0_cosFalse_test_0  
-mse:0.3742096424102783, mae:0.4112592041492462
-
 long_term_forecast_Mamba-2.8b_ETTh1_sl672_ll576_tl96_lr0.0001_bt32_wd0_cosFalse_test_0  
 mse:0.37439069151878357, mae:0.41398611664772034
 
 long_term_forecast_Mamba-130m_ETTh1_sl672_ll576_tl96_lr0.0001_bt32_wd0_cosFalse_test_0  
 mse:0.37566640973091125, mae:0.4164443910121918
+
+long_term_forecast_Mamba-2.8b_ETTh1_sl672_ll576_tl96_lr0.0001_bt32_wd0_cosFalse_test_0  
+mse:0.40725600719451904, mae:0.4329611361026764
 
 long_term_forecast_Mamba-130m_ETTh1_sl672_ll576_tl96_lr0.0001_bt32_wd0_cosFalse_test_0  
 mse:0.4030890464782715, mae:0.434850811958313
@@ -21,4 +21,3 @@ mse:0.3669421076774597, mae:0.4068146049976349
 
 long_term_forecast_Mamba-130m_ETTh1_sl672_ll576_tl96_lr0.0001_bt32_wd0_cosFalse_test_0  
 mse:0.37360331416130066, mae:0.4092237055301666
-
