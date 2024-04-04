@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from transformers import MambaForCausalLM, MambaConfig
+from utils import mlp
 
 
 class crossMultiheadAttention(nn.Module):
@@ -120,11 +121,28 @@ class MambaAUTO(nn.Module):
         )
 
         # patch embedder
-        self.patchEmbedder = nn.Linear(self.token_len, self.patch_embed_size) # project [batch_size x n_patch x token_len] to [batch_size x n_patch x patch_embed_size]
+        self.use_mlp = configs.use_mlp
+        self.mlp_hidden_dim = configs.mlp_hidden_dim
+        if self.use_mlp:
+            self.patchEmbedder = mlp.MLP(
+                input_dim = self.token_len,
+                hidden_dims = self.mlp_hidden_dim,
+                output_dim = self.patch_embed_size
+            )
+        else:
+            self.patchEmbedder = nn.Linear(self.token_len, self.patch_embed_size) # project [batch_size x n_patch x token_len] to [batch_size x n_patch x patch_embed_size]
 
         # linears
         self.linearProbe = nn.Linear(self.vocab_size, self.probing_size) # project [vocab_size x vocab_embed_size] to [probing_size x vocab_embed_size], need T twice
-        self.outputLinear = nn.Linear(self.llm_size, self.token_len) # project [batch_size x n_patch x llm_size] to [batch_size x n_patch x token_len]
+        
+        if self.use_mlp:
+            self.outputLinear = mlp.MLP(
+                input_dim = self.llm_size,
+                hidden_dim = self.mlp_hidden_dim,
+                output_dim = self.token_len
+            )
+        else:
+            self.outputLinear = nn.Linear(self.llm_size, self.token_len) # project [batch_size x n_patch x llm_size] to [batch_size x n_patch x token_len]
 
     def forecast(self, x_enc, x_mark_enc = None, x_dec = None, x_mark_dec = None):
         '''
