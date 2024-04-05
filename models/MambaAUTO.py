@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from transformers import MambaForCausalLM, MambaConfig
+from transformers import MambaForCausalLM, MambaConfig, AutoModelForCausalLM
 from utils import mlp
 
 
@@ -76,16 +76,24 @@ class MambaAUTO(nn.Module):
             "Mamba-370m": "state-spaces/mamba-370m-hf",
             "Mamba-790m": "state-spaces/mamba-790m-hf",
             "Mamba-1.4b": "state-spaces/mamba-1.4b-hf",
-            "Mamba-2.8b": "state-spaces/mamba-2.8b-hf"
+            "Mamba-2.8b": "state-spaces/mamba-2.8b-hf",
+            "Llama-2-7b": "meta-llama/Llama-2-7b-hf"
             }
 
-
-        self.mamba = MambaForCausalLM.from_pretrained(
-            model_name_lookup[self.model_name],
-            device_map = self.device,
-            output_hidden_states = True,
-            #load_in_8bit = True
-        )
+        if "mamba" in self.model_name.lower():
+            self.mamba = MambaForCausalLM.from_pretrained(
+                model_name_lookup[self.model_name],
+                device_map = self.device,
+                output_hidden_states = True,
+                #load_in_8bit = True
+            )
+        else:
+            self.mamba = AutoModelForCausalLM.from_pretrained(
+                model_name_lookup[self.model_name],
+                device_map = self.device,
+                output_hidden_states = True,
+                #load_in_8bit = True
+            )
 
         # ---params---
         self.token_len = configs.token_len # define the token length. How much timestamps in a token.
