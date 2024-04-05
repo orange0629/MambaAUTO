@@ -83,7 +83,8 @@ class MambaAUTO(nn.Module):
         self.mamba = MambaForCausalLM.from_pretrained(
             model_name_lookup[self.model_name],
             device_map = self.device,
-            output_hidden_states = True
+            output_hidden_states = True,
+            #load_in_8bit = True
         )
 
         # ---params---
@@ -91,7 +92,8 @@ class MambaAUTO(nn.Module):
         self.patch_embed_size = configs.patch_embed_size # the size of the patch embedding. How many dimensions in a token after passing patch embedder.
 
         self.vocab_embedding = self.mamba.get_input_embeddings().weight # get the pre-trained vocab embedding, in shape [vocab_size x vocab_embed_size]
-        self.vocab_embedding.requires_grad = False # freeze the vocab embedding
+        if configs.unfreeze_llm != True:
+            self.vocab_embedding.requires_grad = False # freeze the vocab embedding
         self.vocab_size = self.vocab_embedding.size(0) # get the vocab size
         self.vocab_embed_size = self.vocab_embedding.size(1) # get the vocab embedding size
 
@@ -108,8 +110,9 @@ class MambaAUTO(nn.Module):
 
         # ---blocks---
         # freeze the model
-        for name, param in self.mamba.named_parameters():
-            param.requires_grad = False
+        if configs.unfreeze_llm != True:
+            for name, param in self.mamba.named_parameters():
+                param.requires_grad = False
 
         # cross multihead attention block
         self.crossMultiheadAttention = crossMultiheadAttention(
