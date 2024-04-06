@@ -75,6 +75,11 @@ parser.add_argument('--gpu', type = int, default = 0, help='gpu')
 parser.add_argument('--use_multi_gpu', action = 'store_true', help = 'use multiple gpus', default = False)
 parser.add_argument('--visualize', action = 'store_true', help = 'visualize', default = False)
 
+# Test
+parser.add_argument('--test_dir', type=str, default='./test', help='test dir')
+parser.add_argument('--test_file_name', type=str, default='checkpoint.pth', help='test file')
+
+
 args = parser.parse_args()
 
 print(args.model)
@@ -84,30 +89,33 @@ if args.task_name == 'long_term_forecast':
 elif args.task_name == 'short_term_forecast':
     Exp = Exp_Short_Term_Forecast
 
-if args.is_training:
-    for ii in range(args.itr):
-        # setting record of experiments
-        exp = Exp(args)  # set experiments
-        setting = '{}_{}_{}_sl{}_ll{}_tl{}_lr{}_bt{}_wd{}_cos{}_{}_{}'.format(
-            args.task_name,
-            #args.model_id,
-            args.model,
-            args.data,
-            args.seq_len,
-            args.label_len,
-            args.token_len,
-            args.learning_rate,
-            args.batch_size,
-            args.weight_decay,
-            #args.mlp_hidden_dim,
-            #args.mlp_hidden_layers,
-            args.cosine,
-            #args.mix_embeds,
-            args.des, ii)
+for ii in range(args.itr):
+    # setting record of experiments
+    exp = Exp(args)  # set experiments
+    setting = '{}_{}_{}_sl{}_ll{}_tl{}_lr{}_bt{}_wd{}_cos{}_{}_{}'.format(
+        args.task_name,
+        #args.model_id,
+        args.model,
+        args.data,
+        args.seq_len,
+        args.label_len,
+        args.token_len,
+        args.learning_rate,
+        args.batch_size,
+        args.weight_decay,
+        #args.mlp_hidden_dim,
+        #args.mlp_hidden_layers,
+        args.cosine,
+        #args.mix_embeds,
+        args.des, ii)
+    if args.is_training:
         if (args.use_multi_gpu and args.local_rank == 0) or not args.use_multi_gpu:
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
         exp.train(setting)
         if (args.use_multi_gpu and args.local_rank == 0) or not args.use_multi_gpu:
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
         exp.test(setting)
+        torch.cuda.empty_cache()
+    else:
+        exp.test(setting, test=1)
         torch.cuda.empty_cache()
