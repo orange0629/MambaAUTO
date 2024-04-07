@@ -3,3 +3,4 @@ dataset/
 runs/
 checkpoints/
 result_long_term_forecast.txt
+train.sh
