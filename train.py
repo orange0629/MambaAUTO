@@ -51,6 +51,7 @@ parser.add_argument('--nhead', type = int, default = 8, help = 'number of heads 
 parser.add_argument('--use_mlp', action = 'store_true', help = 'use mlp in the model', default = False)
 parser.add_argument('--mlp_hidden_dim', type = int, default = 512, help = 'hidden dimension of mlp')
 parser.add_argument('--unfreeze_llm', action = 'store_true', help = 'Unfreeze LLM params', default = False)
+parser.add_argument('--is_direct', action = 'store_true', help = 'ablation for cross attention', default = False)
 
 # optimization
 parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')

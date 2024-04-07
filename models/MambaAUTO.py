@@ -65,6 +65,8 @@ class MambaAUTO(nn.Module):
         else:
             self.device = "cpu"
 
+        self.is_direct = configs.is_direct
+
         print(self.device)
 
         # ---load the pre-trained model---
@@ -199,9 +201,10 @@ class MambaAUTO(nn.Module):
         patch_embed = self.patchEmbedder(fold_out) # [batch_size * nvar x n_patch x patch_embed_size]
 
         # --cross attention--
-        vocab_embed = self.linearProbe(self.vocab_embedding.T).T # [probing_size x vocab_embed_size]
-        vocab_embed = vocab_embed.unsqueeze(0).expand(bs * n_vars, -1, -1) # [batch_size * nvar x probing_size x vocab_embed_size]
-        patch_embed = self.crossMultiheadAttention(patch_embed, vocab_embed) # [batch_size * nvar x n_patch x llm_size]
+        if not self.is_direct:
+            vocab_embed = self.linearProbe(self.vocab_embedding.T).T # [probing_size x vocab_embed_size]
+            vocab_embed = vocab_embed.unsqueeze(0).expand(bs * n_vars, -1, -1) # [batch_size * nvar x probing_size x vocab_embed_size]
+            patch_embed = self.crossMultiheadAttention(patch_embed, vocab_embed) # [batch_size * nvar x n_patch x llm_size]
 
         # --send to LLM--
         outputs = self.mamba(
