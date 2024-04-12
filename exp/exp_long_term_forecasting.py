@@ -233,6 +233,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     print("Early stopping")
                 break
 
+            # print("lr = {:.10f}".format(model_optim.param_groups[0]['lr']))
+
             # the learning rate is adjusted manually.
             if self.args.cosine:
                 scheduler.step()
