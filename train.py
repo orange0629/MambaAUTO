@@ -41,7 +41,7 @@ parser.add_argument('--seasonal_patterns', type = str, default = 'Monthly', help
 
 # model
 parser.add_argument('--model', type = str, default = 'Mamba-2.8b', help = 'Mamba Model Used',
-                    choices = ['Mamba-130m', 'Mamba-370m', 'Mamba-790m', 'Mamba-1.4b', 'Mamba-2.8b', 'Llama-2-7b'])
+                    choices = ['Mamba-130m', 'Mamba-370m', 'Mamba-790m', 'Mamba-1.4b', 'Mamba-2.8b', 'Llama-2-7b', 'Qwen1.5-0.5B', "gpt2"])
 parser.add_argument('--dropout', type = float, default = 0.1, help = 'dropout')
 parser.add_argument('--patch_embed_size', type = int, default = 2560, help = 'dimension of a patch after embedder')
 parser.add_argument('--probing_size', type = int, default = 1000, help = 'how many prototypes remain after probing')

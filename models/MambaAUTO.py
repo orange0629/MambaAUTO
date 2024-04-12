@@ -79,7 +79,9 @@ class MambaAUTO(nn.Module):
             "Mamba-790m": "state-spaces/mamba-790m-hf",
             "Mamba-1.4b": "state-spaces/mamba-1.4b-hf",
             "Mamba-2.8b": "state-spaces/mamba-2.8b-hf",
-            "Llama-2-7b": "meta-llama/Llama-2-7b-hf"
+            "Llama-2-7b": "meta-llama/Llama-2-7b-hf",
+            "Qwen1.5-0.5B": "Qwen/Qwen1.5-0.5B",
+            "gpt2": "gpt2",
             }
 
         if "mamba" in self.model_name.lower():
