@@ -1,10 +1,14 @@
 # This file is used to check the forward path of the model and find potential bugs.
+import tracemalloc
 
+tracemalloc.start()
+
+from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
 import torch
 import torch.nn as nn
 import numpy as np
 from models.MambaAUTO import MambaAUTO
-from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
+
 from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
 import argparse
 
@@ -52,6 +56,7 @@ parser.add_argument('--use_mlp', action = 'store_true', help = 'use mlp in the m
 parser.add_argument('--mlp_hidden_dim', type = int, default = 512, help = 'hidden dimension of mlp')
 parser.add_argument('--unfreeze_llm', action = 'store_true', help = 'Unfreeze LLM params', default = False)
 parser.add_argument('--is_direct', action = 'store_true', help = 'ablation for cross attention', default = False)
+parser.add_argument('--custom_name', type = str, default = '', help = "add custom name to checkpoint folder")
 
 # optimization
 parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
@@ -93,11 +98,12 @@ elif args.task_name == 'short_term_forecast':
 for ii in range(args.itr):
     # setting record of experiments
     exp = Exp(args)  # set experiments
-    setting = '{}_{}_{}_sl{}_ll{}_tl{}_lr{}_bt{}_wd{}_cos{}_{}_{}'.format(
+    setting = '{}_{}_{}_pl{}_sl{}_ll{}_tl{}_lr{}_bt{}_wd{}_cos{}_{}_{}_{}'.format(
         args.task_name,
         #args.model_id,
         args.model,
         args.data,
+        args.test_pred_len,
         args.seq_len,
         args.label_len,
         args.token_len,
@@ -108,7 +114,7 @@ for ii in range(args.itr):
         #args.mlp_hidden_layers,
         args.cosine,
         #args.mix_embeds,
-        args.des, ii)
+        args.des, args.custom_name, ii)
     if args.is_training:
         if (args.use_multi_gpu and args.local_rank == 0) or not args.use_multi_gpu:
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))

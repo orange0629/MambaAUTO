@@ -21,7 +21,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
+import tracemalloc
 
+import sys
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
@@ -37,6 +39,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+import pandas
 
 # init tensorboard
 writer = SummaryWriter()
@@ -182,12 +185,12 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     with torch.cuda.amp.autocast():
                         outputs = self.model(batch_x, batch_x_mark, None, batch_y_mark)
                         loss = criterion(outputs, batch_y)                        
-                        loss_val += loss
+                        loss_val += loss.item()
                         count += 1
                 else:
                     outputs = self.model(batch_x, batch_x_mark, None, batch_y_mark)
                     loss = criterion(outputs, batch_y)
-                    loss_val += loss
+                    loss_val += loss.item()
                     count += 1
                 
                 if (i + 1) % 100 == 0:
@@ -209,6 +212,19 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 else:
                     loss.backward()
                     model_optim.step()
+
+                # if (i + 1) % 1000 == 0:
+                #     snapshot = tracemalloc.take_snapshot()
+                #     top_stats = snapshot.statistics('lineno')
+                #     print("[ Top 10 ]")
+                #     for stat in top_stats[:10]:
+                #         print(stat)
+                #         sys.stdout.flush()
+                #     stat = top_stats[0]
+                #     print("%s memory blocks: %.1f KiB" % (stat.count, stat.size / 1024))
+                #     for line in stat.traceback.format():
+                #         print(line)
+            
             # if (self.args.use_multi_gpu and self.args.local_rank == 0) or not self.args.use_multi_gpu:
             #     print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))   
             if self.args.use_multi_gpu:
@@ -327,6 +343,15 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     if not os.path.exists(dir_path):
                         os.makedirs(dir_path)
                     visual(gt, pd, os.path.join(dir_path, f'{i}.pdf'))
+                
+                if i == 0 or i == self.args.test_pred_len:
+                    gt = np.array(true[0, :, -1])
+                    pd = np.array(pred[0, :, -1])
+                    dir_path = folder_path + f'{self.args.test_pred_len}/'
+                    if not os.path.exists(dir_path):
+                        os.makedirs(dir_path)
+                    df = pandas.DataFrame({"Ground Truth": gt, "Prediction": pd})
+                    df.to_csv(os.path.join(dir_path, f'{i}.csv'), index=False)
         
         preds = torch.cat(preds, dim=0).numpy()
         trues = torch.cat(trues, dim=0).numpy()

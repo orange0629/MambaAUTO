@@ -4,3 +4,6 @@ runs/
 checkpoints/
 result_long_term_forecast.txt
 train.sh
+*.sh
+*.out
+test_results/
