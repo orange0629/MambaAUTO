@@ -1,7 +1,7 @@
 <div align="center">
   <!-- <h1><b> Time-LLM </b></h1> -->
   <!-- <h2><b> Time-LLM </b></h2> -->
-  <h2><b> MambaAUTO: Time Series Forecasting Using Mamba as Backbone </b></h2>
+  <h2><b> MambaAUTO: Mamba as Autoregressive Time Series Forecasters </b></h2>
 </div>
 
 ### 1. Introduction
