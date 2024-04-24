@@ -18,7 +18,6 @@ output window size.
 MambaAUTO has demonstrated strong capabilities on different kinds of time series forecasting tasks. It outperforms TimesNet and FPT on all 5 benchmarks and outperforms DLinear and iTransformer on 4 benchmarks. However, our model does not outperform AutoTimes and PatchTST, which are the current state-of-the-art models.
 
 ![Sample forecast](./figures/sample_forecast.jpg)
-![performance](./figures/radar.jpg)
 
 ## 3. Data
 |             | Features                                             | Sample Rate | Time Range |
