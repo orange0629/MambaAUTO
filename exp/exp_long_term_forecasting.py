@@ -347,7 +347,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 if i == 0 or i == self.args.test_pred_len:
                     gt = np.array(true[0, :, -1])
                     pd = np.array(pred[0, :, -1])
-                    dir_path = folder_path + f'{self.args.test_pred_len}/'
+                    dir_path = folder_path
                     if not os.path.exists(dir_path):
                         os.makedirs(dir_path)
                     df = pandas.DataFrame({"Ground Truth": gt, "Prediction": pd})
