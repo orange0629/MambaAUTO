@@ -33,7 +33,7 @@ MambaAUTO has demonstrated strong capabilities on different kinds of time series
 You can access the well pre-processed datasets from [[Google Drive]](https://drive.google.com/file/d/1NF7VEefXCmXuWNbnNe858WvQAkJ_7wuP/view?usp=sharing), then place the downloaded contents under `./dataset`
 
 
-## 3. How to run codes
+## 4. How to run codes
 ### To install all dependencies:
 ```
 pip install -r requirements.txt
